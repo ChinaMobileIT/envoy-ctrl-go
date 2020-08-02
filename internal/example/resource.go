@@ -25,7 +25,8 @@ import (
 	listener "github.com/ChinaMobileIT/envoy-ctrl-go/envoy/config/listener/v3"
 	route "github.com/ChinaMobileIT/envoy-ctrl-go/envoy/config/route/v3"
 	hcm "github.com/ChinaMobileIT/envoy-ctrl-go/envoy/extensions/filters/network/http_connection_manager/v3"
-	envoy_extensions_transport_sockets_tls_v3 "github.com/ChinaMobileIT/envoy-ctrl-go/envoy/extensions/transport_sockets/tls/v3"
+	socketsTlsV3 "github.com/ChinaMobileIT/envoy-ctrl-go/envoy/extensions/transport_sockets/tls/v3"
+	"github.com/ChinaMobileIT/envoy-ctrl-go/internal/example/envoy"
 	"github.com/ChinaMobileIT/envoy-ctrl-go/internal/example/protobuf"
 	"github.com/ChinaMobileIT/envoy-ctrl-go/pkg/cache/types"
 	"github.com/ChinaMobileIT/envoy-ctrl-go/pkg/cache/v3"
@@ -33,29 +34,8 @@ import (
 	"github.com/ChinaMobileIT/envoy-ctrl-go/pkg/wellknown"
 )
 
-// UpstreamTLSTransportSocket returns a custom transport socket using the UpstreamTlsContext provided.
-func UpstreamTLSTransportSocket(tls *envoy_extensions_transport_sockets_tls_v3.UpstreamTlsContext) *core.TransportSocket {
-	config := protobuf.MustMarshalAny(tls)
-	return &core.TransportSocket{
-		Name: "envoy.transport_sockets.tls",
-		ConfigType: &core.TransportSocket_TypedConfig{
-			TypedConfig: config,
-		},
-	}
-}
-
-//
-// // DownstreamTLSTransportSocket returns a custom transport socket using the DownstreamTlsContext provided.
-// func DownstreamTLSTransportSocket(tls *envoy_api_v2_auth.DownstreamTlsContext) *envoy_api_v2_core.TransportSocket {
-// 	return &envoy_api_v2_core.TransportSocket{
-// 		Name: "envoy.transport_sockets.tls",
-// 		ConfigType: &envoy_api_v2_core.TransportSocket_TypedConfig{
-// 			TypedConfig: protobuf.MustMarshalAny(tls),
-// 		},
-// 	}
-// }
 func makeCluster(clusterName string, upstreamHost string, upstreamPort uint32) *cluster.Cluster {
-	context := &envoy_extensions_transport_sockets_tls_v3.UpstreamTlsContext{
+	context := &socketsTlsV3.UpstreamTlsContext{
 		Sni: upstreamHost,
 	}
 	return &cluster.Cluster{
@@ -64,7 +44,7 @@ func makeCluster(clusterName string, upstreamHost string, upstreamPort uint32) *
 		ConnectTimeout:       ptypes.DurationProto(250 * time.Millisecond),
 		LbPolicy:             cluster.Cluster_ROUND_ROBIN,
 		LoadAssignment:       makeEndpoint(clusterName, upstreamHost, upstreamPort),
-		TransportSocket:      UpstreamTLSTransportSocket(context),
+		TransportSocket:      envoy.UpstreamTLSTransportSocket(context),
 		DnsLookupFamily:      cluster.Cluster_V4_ONLY,
 	}
 }
@@ -192,24 +172,16 @@ func GenerateSnapshot(version, UpstreamHost string, UpstreamPort, ListenerPort u
 
 	clusters, routes, listeners = addNewGuide(clusters, routes, listeners, UpstreamHost, UpstreamPort, ListenerPort)
 
-	return cache.NewSnapshot(
-		version,
-		endpoints,
-		clusters,
-		routes,
-		listeners,
-		runtimes,
-		secrets,
-	)
+	return cache.NewSnapshot(version, endpoints, clusters, routes, listeners, runtimes, secrets)
 }
 
-func addNewGuide(clusters, routes, listeners []types.Resource, UpstreamHost string, UpstreamPort, ListenerPort uint32) ([]types.Resource, []types.Resource, []types.Resource) {
-	ClusterName := "cluseter_" + UpstreamHost
-	RouteName := "route_" + UpstreamHost
-	ListenerName := "listener_" + UpstreamHost
-	clusters = append(clusters, makeCluster(ClusterName, UpstreamHost, UpstreamPort))
-	routes = append(routes, makeRoute(RouteName, ClusterName, UpstreamHost))
-	listeners = append(listeners, makeHTTPListener(ListenerName, RouteName, ListenerPort))
-	fmt.Println(UpstreamHost, UpstreamPort, ListenerPort)
+func addNewGuide(clusters, routes, listeners []types.Resource, upstreamHost string, upstreamPort, listenerPort uint32) ([]types.Resource, []types.Resource, []types.Resource) {
+	clusterName := "cluster_" + upstreamHost
+	routeName := "route_" + upstreamHost
+	listenerName := "listener_" + upstreamHost
+	clusters = append(clusters, makeCluster(clusterName, upstreamHost, upstreamPort))
+	routes = append(routes, makeRoute(routeName, clusterName, upstreamHost))
+	listeners = append(listeners, makeHTTPListener(listenerName, routeName, listenerPort))
+	fmt.Println(upstreamHost, upstreamPort, listenerPort)
 	return clusters, routes, listeners
 }

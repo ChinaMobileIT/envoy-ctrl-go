@@ -27,19 +27,15 @@ import (
 )
 
 var (
-	l example.Logger
-
-	port     uint
-	basePort uint
-	mode     string
-
+	l      example.Logger
+	port   uint
 	nodeID string
 )
 
 func init() {
 	l = example.Logger{}
 
-	flag.BoolVar(&l.Debug, "debug", false, "Enable xDS server debug logging")
+	flag.BoolVar(&l.Debug, "debug", true, "Enable xDS server debug logging")
 
 	// The port that this xDS server listens on
 	flag.UintVar(&port, "port", 18000, "xDS management server port")
