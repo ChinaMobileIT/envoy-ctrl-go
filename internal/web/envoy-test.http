@@ -1,0 +1,36 @@
+#增加百度的网关路由
+GET http://localhost:9999/add/www.baidu.com/443/10000
+Accept: application/json
+
+###
+
+#验证一下百度
+GET http://127.0.0.1:10000
+
+###
+
+
+#增加cnbeta的网关路由
+GET http://localhost:9999/add/www.cnbeta.com/443/10001
+Accept: application/json
+
+###
+
+#验证一下cnbeta
+GET http://127.0.0.1:10001
+
+###
+
+
+#重置网关
+GET http://localhost:9999/reset
+Accept: application/json
+
+###
+
+
+#查看网关当前snapshot
+GET http://localhost:9999/snapshot
+Accept: application/json
+
+###

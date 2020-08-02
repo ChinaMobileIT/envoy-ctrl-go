@@ -15,6 +15,7 @@ package example
 
 import (
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/golang/protobuf/ptypes"
@@ -161,21 +162,24 @@ func makeConfigSource() *core.ConfigSource {
 	return source
 }
 
-func GenerateSnapshot(version, UpstreamHost string, UpstreamPort, ListenerPort uint32) cache.Snapshot {
+var endpoints []types.Resource
+var clusters []types.Resource
+var routes []types.Resource
+var listeners []types.Resource
+var runtimes []types.Resource
+var secrets []types.Resource
 
-	var endpoints []types.Resource
-	var clusters []types.Resource
-	var routes []types.Resource
-	var listeners []types.Resource
-	var runtimes []types.Resource
-	var secrets []types.Resource
-
-	clusters, routes, listeners = addNewGuide(clusters, routes, listeners, UpstreamHost, UpstreamPort, ListenerPort)
-
-	return cache.NewSnapshot(version, endpoints, clusters, routes, listeners, runtimes, secrets)
+func GenerateSnapshot(upstreamHost string, upstreamPort, listenerPort uint32) cache.Snapshot {
+	version := addNewGuide(upstreamHost, upstreamPort, listenerPort)
+	snapshot := cache.NewSnapshot(version, endpoints, clusters, routes, listeners, runtimes, secrets)
+	if err := snapshot.Consistent(); err != nil {
+		fmt.Errorf(err.Error())
+		os.Exit(1)
+	}
+	return snapshot
 }
 
-func addNewGuide(clusters, routes, listeners []types.Resource, upstreamHost string, upstreamPort, listenerPort uint32) ([]types.Resource, []types.Resource, []types.Resource) {
+func addNewGuide(upstreamHost string, upstreamPort, listenerPort uint32) (version string) {
 	clusterName := "cluster_" + upstreamHost
 	routeName := "route_" + upstreamHost
 	listenerName := "listener_" + upstreamHost
@@ -183,5 +187,20 @@ func addNewGuide(clusters, routes, listeners []types.Resource, upstreamHost stri
 	routes = append(routes, makeRoute(routeName, clusterName, upstreamHost))
 	listeners = append(listeners, makeHTTPListener(listenerName, routeName, listenerPort))
 	fmt.Println(upstreamHost, upstreamPort, listenerPort)
-	return clusters, routes, listeners
+	return fmt.Sprintf("%d", time.Now().Nanosecond())
+}
+
+func Reset() cache.Snapshot {
+	endpoints = []types.Resource{}
+	clusters = []types.Resource{}
+	routes = []types.Resource{}
+	listeners = []types.Resource{}
+	runtimes = []types.Resource{}
+	secrets = []types.Resource{}
+	snapshot := cache.NewSnapshot("0", endpoints, clusters, routes, listeners, runtimes, secrets)
+	if err := snapshot.Consistent(); err != nil {
+		fmt.Errorf(err.Error())
+		os.Exit(1)
+	}
+	return snapshot
 }

@@ -16,14 +16,12 @@ package main
 import (
 	"context"
 	"flag"
-	"os"
-	"time"
-
-	cachev3 "github.com/ChinaMobileIT/envoy-ctrl-go/pkg/cache/v3"
-	serverv3 "github.com/ChinaMobileIT/envoy-ctrl-go/pkg/server/v3"
-	testv3 "github.com/ChinaMobileIT/envoy-ctrl-go/pkg/test/v3"
 
 	"github.com/ChinaMobileIT/envoy-ctrl-go/internal/example"
+	"github.com/ChinaMobileIT/envoy-ctrl-go/internal/example/cache"
+	"github.com/ChinaMobileIT/envoy-ctrl-go/internal/web"
+	serverv3 "github.com/ChinaMobileIT/envoy-ctrl-go/pkg/server/v3"
+	testv3 "github.com/ChinaMobileIT/envoy-ctrl-go/pkg/test/v3"
 )
 
 var (
@@ -47,33 +45,10 @@ func init() {
 func main() {
 	flag.Parse()
 
-	// Create a cache
-	cache := cachev3.NewSnapshotCache(false, cachev3.IDHash{}, l)
-	// Create the snapshot that we'll serve to Envoy
-	snapshot := example.GenerateSnapshot("1", "www.baidu.com", 443, 10000)
-	if err := snapshot.Consistent(); err != nil {
-		l.Errorf("snapshot inconsistency: %+v\n%+v", snapshot, err)
-		os.Exit(1)
-	}
-	l.Debugf("will serve snapshot %+v", snapshot)
+	cache := cache.NewCache(l)
 
-	// Add the snapshot to the cache
-	if err := cache.SetSnapshot(nodeID, snapshot); err != nil {
-		l.Errorf("snapshot error %q for %+v", err, snapshot)
-		os.Exit(1)
-	}
-
-	go func() {
-		tick := time.Tick(60 * time.Second)
-		select {
-		case <-tick:
-			snapshot = example.GenerateSnapshot("2", "www.cnbeta.com", 443, 10001)
-			if err := cache.SetSnapshot(nodeID, snapshot); err != nil {
-				l.Errorf("snapshot error %q for %+v", err, snapshot)
-				os.Exit(1)
-			}
-		}
-	}()
+	// 启动web服务器，提供简化的操作接口
+	go web.Start()
 
 	// Run the xDS server
 	ctx := context.Background()
