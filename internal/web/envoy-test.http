@@ -34,3 +34,10 @@ GET http://localhost:9999/snapshot
 Accept: application/json
 
 ###
+
+
+#查看网关的cluster信息
+GET http://127.0.0.1:19000/clusters
+Accept: application/json
+
+###
